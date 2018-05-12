@@ -192,8 +192,7 @@ router.post('/start', function(req, res, next) {
  *         description: car
  */
 router.post('/status', function(req, res, next) {
-	console.log('',req.body);
-	console.log('',req.params);
+
 	knex('car')
 	.where('id', '=', req.body.id)
 	.update({
@@ -546,7 +545,6 @@ router.post('/speed', function(req, res, next) {
 	.from('car')
 	.where({id: req.body.id,status:1})
 	.then(function(rows) {
-		console.log('speed',rows);
 			if(rows.length > 0){
 				  return knex('settings').where('car_id', '=', req.body.id).update({speed: req.body.speed});
 			}else{
