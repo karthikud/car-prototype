@@ -2,10 +2,11 @@
 ## To Get Started
 
 1. clone https://github.com/karthikud/car-prototype.git
-2. Run npm install for installing the dependencies
-3. In terminal,Run knex migrate:latest to create database schemas
-3. Run npm start for starting the API
-4. Run npm run test for running the test suites
+2. Run `npm install` for installing the dependencies
+3. Create a local mysql instance and update the config in `knexfile.js` 
+4. In terminal,Run `knex migrate:latest` to create database schemas
+5. Run `npm start` for starting the API
+6. Run `npm run test` for running the test suites
 
 ## Use the Swagger UI for testing the API
 ## local setup
