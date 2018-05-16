@@ -17,9 +17,6 @@ Point your browser at `http://localhost:3000`, you should see the swagger docume
 
 The base API is available at the route `/api` e.g. `http://localhost:3000/api/cars`.
 
-1.Live api is deployed and can be accessed in the below url
-
-https://car-prototype.herokuapp.com/  [in Live api Use https scheme in swagger / in local setup use http scheme]
 
 
 ## TO-DO
