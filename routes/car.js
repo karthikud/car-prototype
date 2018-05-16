@@ -1,18 +1,33 @@
 var express = require('express');
 var router = express.Router();
-var knex = require('knex')({
-  client: 'mysql',
-  connection: {
-    host : '127.0.0.1',
-    user : 'root',
-    password : '',
-    database : 'application'
-  }
+var carService = require('../services/car');
+var settingsService = require('../services/settings');
+const { celebrate,Joi,errors } = require('celebrate');
+const carCreateSchema = celebrate({
+    body: Joi.object().keys({
+        name: Joi.string().alphanum().min(3).max(30).required(),
+        license: Joi.string().alphanum().min(3).max(30).required()
+    })
 });
-
+const carSchema = celebrate({
+    body: Joi.object().keys({
+        id: Joi.required(),
+        license: Joi.string().alphanum().min(3).max(30),
+        status: Joi.string().valid('0', '1'),
+    })
+});
+const settingsSchema = celebrate({
+    body: Joi.object().keys({
+        id: Joi.required(),
+        lights: Joi.string().valid('0', '1', '2'),
+        signal: Joi.string().valid('0', '1'),
+        type: Joi.string().valid('left', 'right'),
+        speed: Joi.string().valid('0','10', '20', '30', '40', '50', '60')
+    })
+});
 /**
  * @swagger
- * /car:
+ * /cars:
  *   get:
  *     tags:
  *       - Cars
@@ -21,32 +36,16 @@ var knex = require('knex')({
  *       - application/json
  *     responses:
  *       200:
- *         description: An array of cars
+ *         description: Returns Car in Array of objects
  */
-
-router.get('/', function(req, res, next) {
-knex.select().table('car').then(function(collection){
-    res.json({
-      error:false,
-      data: collection
-    })
-  })
-  .catch(function(err){
-    res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-    })
-  })
-});
+router.get('/', carService.getAll);
 /**
  * @swagger
- * /car/{id}:
+ * /cars/{id}:
  *   get:
  *     tags:
  *       - Cars
- *     description: Returns a car
+ *     description: Get a particular car with it's Id
  *     produces:
  *       - application/json
  *     parameters:
@@ -57,32 +56,13 @@ knex.select().table('car').then(function(collection){
  *         type: integer
  *     responses:
  *       200:
- *         description: An array of car
+ *         description: Returns Car data in an object
  */
-
 //get a car
-router.get('/:id', function(req, res, next) {
-	knex('car')
-.where({
-  id: req.params.id
-}).select().then(function(collection){
-    res.json({
-      error:false,
-      data: collection
-    })
-  })
-  .catch(function(err){
-    res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-    })
-  })
-});
+router.get('/:id', carService.getOne);
 /**
  * @swagger
- * /car:
+ * /cars:
  *   post:
  *     tags:
  *       - Cars
@@ -98,41 +78,15 @@ router.get('/:id', function(req, res, next) {
  *       - name: license
  *         description: license.
  *         in: formData
- *         required: true
  *         type: string
  *     responses:
  *       200:
  *         description: car
  */
-router.post('/', function(req, res, next) {
-
-var insertParams = {};
-insertParams.name  = req.body.name;
-insertParams.status  = req.body.status ? req.body.status : 0 ;
-insertParams.license_plate  = req.body.license;
-knex('car').insert(insertParams)
-.then(function(rows) {
-
-  return knex.insert({car_id: rows, lights: 0,left_signal:0,right_signal:0,speed:0}, 'id').into('settings');
-})
-    .then(function(id){
-      res.json({
-        error:false,
-        data: id
-      })
-    })
-    .catch(function(err){
-      res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-      })
-    })
-});
+router.post('/',carCreateSchema,carService.create);
 /**
  * @swagger
- * /car/start:
+ * /cars/start:
  *   post:
  *     tags:
  *       - Cars
@@ -149,36 +103,14 @@ knex('car').insert(insertParams)
  *       200:
  *         description: car
  */
-router.post('/start', function(req, res, next) {
-	knex('car')
-	.where('id', '=', req.body.id)
-	.update({
-	  status: 1
-	})
-    .then(function(id){
-      res.json({
-        error:false,
-        data: id
-      })
-    })
-    .catch(function(err){
-      res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-      })
-    })
-});
-
-
+router.post('/start',carSchema, carService.startCar);
 /**
  * @swagger
- * /car/status:
+ * /cars/status:
  *   post:
  *     tags:
  *       - Cars
- *     description: start a car
+ *     description: change a car's status
  *     produces:
  *       - application/json
  *     parameters:
@@ -187,40 +119,23 @@ router.post('/start', function(req, res, next) {
  *         in: formData
  *         required: true
  *         type: integer
+ *       - name: status
+ *         description: status of the car to change.
+ *         in: formData
+ *         required: true
+ *         type: string
  *     responses:
  *       200:
  *         description: car
  */
-router.post('/status', function(req, res, next) {
-
-	knex('car')
-	.where('id', '=', req.body.id)
-	.update({
-	  status: 1
-	})
-    .then(function(id){
-      res.json({
-        error:false,
-        data: id
-      })
-    })
-    .catch(function(err){
-      res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-      })
-    })
-});
-
+router.post('/status',carSchema, carService.setStatus);
 /**
  * @swagger
- * /car/status/{id}:
+ * /cars/status/{id}:
  *   get:
  *     tags:
  *       - Cars
- *     description: Returns a car
+ *     description: Returns a car's status
  *     produces:
  *       - application/json
  *     parameters:
@@ -234,31 +149,10 @@ router.post('/status', function(req, res, next) {
  *         description: An array of car
  */
 //get car status
-router.get('/status/:id', function(req, res, next) {
-knex('car')
-.where({
-  id: req.params.id
-}).select('status').then(function(collection){
-    res.json({
-      error:false,
-      data: collection
-    })
-  })
-  .catch(function(err){
-    res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-    })
-  })
-});
-
-
-
+router.get('/status/:id', carService.getStatus);
 /**
  * @swagger
- * /car/license:
+ * /cars/license:
  *   post:
  *     tags:
  *       - Cars
@@ -280,36 +174,14 @@ knex('car')
  *       200:
  *         description: car
  */
-router.post('/license', function(req, res, next) {
-	knex('car')
-	.where('id', '=', req.body.id)
-	.update({
-	  license_plate: req.body.license
-	})
-    .then(function(id){
-      res.json({
-        error:false,
-        data: id
-      })
-    })
-    .catch(function(err){
-      res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-      })
-    })
-});
-
-
+router.post('/license',carSchema, carService.setLicense);
 /**
  * @swagger
- * /car/license/{id}:
+ * /cars/license/{id}:
  *   get:
  *     tags:
  *       - Cars
- *     description: Returns a car
+ *     description: Returns a car's license
  *     produces:
  *       - application/json
  *     parameters:
@@ -322,30 +194,10 @@ router.post('/license', function(req, res, next) {
  *       200:
  *         description: An array of car
  */
-router.get('/license/:id', function(req, res, next) {
-knex('car')
-.where({
-  id: req.params.id
-}).select('license_plate').then(function(collection){
-    res.json({
-      error:false,
-      data: collection
-    })
-  })
-  .catch(function(err){
-    res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-    })
-  })
-});
-
-
+router.get('/license/:id',carService.getLicense);
 /**
  * @swagger
- * /car/lights:
+ * /cars/lights:
  *   post:
  *     tags:
  *       - Cars
@@ -367,36 +219,14 @@ knex('car')
  *       200:
  *         description: car
  */
-router.post('/lights', function(req, res, next) {
-	knex('settings')
-	.where('car_id', '=', req.body.id)
-	.update({
-	  lights: req.body.lights
-	})
-    .then(function(id){
-      res.json({
-        error:false,
-        data: id
-      })
-    })
-    .catch(function(err){
-      res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-      })
-    })
-});
-
-
+router.post('/lights', settingsSchema, settingsService.setLights);
 /**
  * @swagger
- * /car/lights/{id}:
+ * /cars/lights/{id}:
  *   get:
  *     tags:
  *       - Cars
- *     description: Returns a car
+ *     description: Returns a car's lights status
  *     produces:
  *       - application/json
  *     parameters:
@@ -409,29 +239,10 @@ router.post('/lights', function(req, res, next) {
  *       200:
  *         description: An array of car
  */
-router.get('/lights/:id', function(req, res, next) {
-knex('settings')
-.where({
-  car_id: req.params.id
-}).select('lights').then(function(collection){
-    res.json({
-      error:false,
-      data: collection
-    })
-  })
-  .catch(function(err){
-    res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-    })
-  })
-});
-
+router.get('/lights/:id', settingsService.getLights);
 /**
  * @swagger
- * /car/signal:
+ * /cars/signal:
  *   post:
  *     tags:
  *       - Cars
@@ -449,40 +260,23 @@ knex('settings')
  *         in: formData
  *         required: true
  *         type: string
+ *       - name: type
+ *         description: left or right.
+ *         in: formData
+ *         required: true
+ *         type: string
  *     responses:
  *       200:
  *         description: car
  */
-router.post('/signal', function(req, res, next) {
-	var updateSignal = req.body.type == 'left' ? 'left_signal' : 'right_signal';
-
-	knex('settings')
-	.where('car_id', '=', req.body.id)
-	.update(updateSignal, req.body.signal)
-    .then(function(id){
-      res.json({
-        error:false,
-        data: id
-      })
-    })
-    .catch(function(err){
-      res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-      })
-    })
-});
-
-
+router.post('/signal',settingsSchema,settingsService.setSignal);
 /**
  * @swagger
- * /car/signal/{id}:
+ * /cars/signal/{id}:
  *   get:
  *     tags:
  *       - Cars
- *     description: Returns a car
+ *     description: Returns a car's signal
  *     produces:
  *       - application/json
  *     parameters:
@@ -491,34 +285,19 @@ router.post('/signal', function(req, res, next) {
  *         in: path
  *         required: true
  *         type: integer
+ *       - name: type
+ *         description: car's signal type
+ *         in: query
+ *         required: true
+ *         type: string
  *     responses:
  *       200:
  *         description: An array of car
  */
-router.get('/signal/:id', function(req, res, next) {
-var updateSignal = req.param('type') == 'left' ? 'left_signal' : 'right_signal';
-knex('settings')
-.where({
-  car_id: req.params.id
-}).select(updateSignal).then(function(collection){
-    res.json({
-      error:false,
-      data: collection
-    })
-  })
-  .catch(function(err){
-    res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-    })
-  })
-});
-
+router.get('/signal/:id', settingsService.getSignal);
 /**
  * @swagger
- * /car/speed:
+ * /cars/speed:
  *   post:
  *     tags:
  *       - Cars
@@ -540,41 +319,14 @@ knex('settings')
  *       200:
  *         description: car
  */
-router.post('/speed', function(req, res, next) {
-	knex.select('*')
-	.from('car')
-	.where({id: req.body.id,status:1})
-	.then(function(rows) {
-			if(rows.length > 0){
-				  return knex('settings').where('car_id', '=', req.body.id).update({speed: req.body.speed});
-			}else{
-				return;
-			}
-	})
-    .then(function(id){
-      res.json({
-        error:false,
-        data: id
-      })
-    })
-    .catch(function(err){
-      res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-      })
-    })
-});
-
-
+router.post('/speed',settingsSchema,settingsService.setSpeed);
 /**
  * @swagger
- * /car/speed/{id}:
+ * /cars/speed/{id}:
  *   get:
  *     tags:
  *       - Cars
- *     description: Returns a car
+ *     description: Returns a car's speed
  *     produces:
  *       - application/json
  *     parameters:
@@ -587,23 +339,5 @@ router.post('/speed', function(req, res, next) {
  *       200:
  *         description: An array of car
  */
-router.get('/speed/:id', function(req, res, next) {
-knex('settings')
-.where({
-  car_id: req.params.id
-}).select('speed').then(function(collection){
-    res.json({
-      error:false,
-      data: collection
-    })
-  })
-  .catch(function(err){
-    res.status(500).json({
-      error:true,
-      data:{
-        message:err.message
-      }
-    })
-  })
-});
+router.get('/speed/:id', settingsService.getSpeed);
 module.exports = router;

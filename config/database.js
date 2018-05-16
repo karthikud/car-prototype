@@ -1,11 +1,5 @@
-const mysql = require('mysql');
-
-module.exports = mysql.createPool({
-    connectionLimit : 100,
-    host : 'localhost',
-    user :  'root',
-    password: '',
-    database: 'application'
-})
-
-
+var config = require('../knexfile.js');
+var env = 'development';
+var knex = require('knex')(config[env]);
+module.exports = knex;
+//knex.migrate.latest([config]);
